@@ -1,0 +1,109 @@
+---
+title: "NYPD Shooting Incident"
+author: "C. Bissereth"
+date: "5/24/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## NYPD Shooting Analysis
+
+### Question of Interest 
+What I wanted to investigate with this data is the number of murders based on two different criteria; by Borough and by Date. I wanted to investigate this because this information can bring up the areas in NYC that are more susceptible to murders and proper measures can take place to help prevent these murders. With that information as well it could be investigated why on certain dates these murders are happening. Could it be because of certain holidays around those dates? Does it have to do with the amount of people that could be outside more during those dates such as during the summer?
+
+### Source and Description of Data
+The source of this data is the City of New York. This data shows information related to every shooting incident that occurred in NYC going back to 2006 through the end of 2020. This data is manually extracted every quarter and reviewed by the Office of Management Analysis and Planning before being posted on the NYPD website. Each record represents a shooting incident in NYC and includes information about the event, the location and time of occurrence. 
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(eval = TRUE, 
+                      include = TRUE,
+                      echo = TRUE,
+                      warning = FALSE, 
+                      message = FALSE,
+                      collapse = TRUE,
+                      dpi = 300,
+                      fig.dim = c(8, 4),
+                      out.width = '90%',
+                      out.height = '90%',
+                      cache = TRUE)
+```
+
+```{r Murder_Flag_By_Borough, echo= TRUE}
+library(tidyverse)
+
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+
+data <- read_csv(url_in)
+
+library(lubridate)
+library(ggplot2)
+library(rlang)
+
+#change data orientation
+data <- data %>%
+ mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+
+#get rid of unneeded columns
+data[15:19] <- NULL
+
+#change name of column
+colnames(data)[4] <- 'BOROUGH' 
+
+#analyze murders by borough
+borough_flag_murder <- data %>%                                       
+  group_by(BOROUGH) %>%                      
+  summarise_at(vars(STATISTICAL_MURDER_FLAG), 
+               list(name = sum))
+print(borough_flag_murder)
+```
+
+```{r}
+#plotted 
+glimpse(borough_flag_murder)
+
+g <- ggplot(borough_flag_murder, aes(x = BOROUGH, y = name)) +
+  geom_bar(stat="identity")
+
+plot(g)
+```
+
+```{r}
+#analyze murders by date
+murder_flag_date <- data %>%                                       
+  group_by(OCCUR_DATE) %>%                      
+  summarise_at(vars(STATISTICAL_MURDER_FLAG), 
+               list(name = sum))
+print(murder_flag_date)
+```
+
+```{r}
+#plotted 
+glimpse(murder_flag_date)
+
+g <- ggplot(murder_flag_date, aes(x = OCCUR_DATE, y = name)) +
+  geom_bar(stat="identity")
+
+plot(g)
+```
+
+```{r}
+#model
+x <- factor(data$BOROUGH)
+mod <- lm(STATISTICAL_MURDER_FLAG ~ x, data)
+summary(mod)
+```
+
+### Model/Analysis of Data
+According to the linear model I've created above, I was able to receive a lot of information related to the relationship between the number of murders by borough. The most relevant information is the t value and Pr values. Generally for T values we want the value to be as far away as possible in order to reject the null hypothesis, that is we could declare a relationship between the number of murders and boroughs. The t value here is 38.710, which is very far from zero meaning that there is indeed a great relationship. Also another thing to note is that when there are three asterisks next to a value, it's an indicator that these values are very important. The Pr value for this relationship is 2e-16 which is a significantly small number so just like I said earlier we can reject the null hypothesis.
+
+According to the Std. Error value for Staten Island which is 0.015615, since this value is greater than the other Std. Error values for the other boroughs this bring up the point that the number of murders within this error tend to be more irregular in comparison to the other boroughs. For Std. Error values we ideally want values as close to 0 as possible and the further away these values are from 0, the more likely the number of murders in this case is likely to deviate against the predicted pattern as determined by the linear model.
+
+The last variable I would like to discuss is the R-squared value which is at 0.0003632. Typically for R-squared values, we would want the value to be as close to 1 as possible since that signifies that the regression explains the observed variance in the response variable very well. So according to the R-squared value I've received, 0.036% of the variance found in the response variable (statistical murder flag) can be explained by the predictor variable (borough). This means that in my analysis I would've probably used more variables to help bring up this value which will in turn make the linear regression more accurate.
+
+### Conclusion and Bias
+In conclusion, according to the visuals I made of the analysis of the murders by borough, and murders by date, it seems as though the borough with the most murders is Brooklyn with 1,892 murders since 2006 until 2020; and the borough with the least murders is Staten Island at 143 murders. The Staten Island murders being that low yet having more variance in its data according to my model also makes me raise an eye especially when comparing that fact to the Brooklyn murders and Brooklyn having the least variance in its data. This tells me that possibly it is more common and expected for murders to occur in Brooklyn than in Staten Island. When the murders happen in Staten Island it's more out of the ordinary for this community. This also makes me want to investigate the differentiating factors between these two areas such as size of these two borough making me think that it's possible that Brooklyn has the most murders naturally since the area could be bigger. I also want to further investigate what economic factors could play a major role in these murders. 
+
+And when I made the analysis of the murders by date, I learned that the murders were as from what I could see from my naked eye that they were evenly spread out throughout the year. That being said, another analysis I would perform is to calculate number of murders by season perhaps, and I believe that would help give a better analysis.
+
+The bias that is possible within my data and within my analysis could be that there's a chance I could have visualized the data in a way to favor one certain demographic or to hurt one certain demographic, for example if I did a murder by race count, the race with the most murders could look negative in the eyes of the person reading my analysis and report, and therefore they may form a negative bias against that group.
